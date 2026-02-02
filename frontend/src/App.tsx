@@ -1,10 +1,7 @@
-function App() {
+import AppRouter from './router/AppRouter'
 
-  return (
-    <>
-      <h1 className="p-6 text-red-500">componentes app.tsx</h1>
-    </>
-  )
+function App() {
+  return <AppRouter />
 }
 
 export default App
