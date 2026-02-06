@@ -1,5 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.core.config import settings
 from app.database import engine
 from sqlalchemy import text
@@ -8,7 +10,19 @@ from sqlalchemy import text
 from app.models import Base, User, Contact, Task
 
 # Importar routers
-from app.api.routes import auth, users, contacts, tasks, task_history, ai
+from app.api.routes import auth, users, contacts, tasks, task_history, ai, dashboard
+
+# Importar manejadores de excepciones
+from app.middleware.error_handler import (
+    http_exception_handler,
+    validation_exception_handler,
+    global_exception_handler
+)
+
+# Importar rate limiting
+from app.core.rate_limit import limiter
+from slowapi.errors import RateLimitExceeded
+from slowapi import _rate_limit_exceeded_handler
 
 # Crear todas las tablas
 Base.metadata.create_all(bind=engine)
@@ -21,6 +35,10 @@ app = FastAPI(
     description="API para gestión de tareas automatizadas con IA"
 )
 
+# Configurar rate limiting
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 # CORS
 app.add_middleware(
     CORSMiddleware,
@@ -29,6 +47,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Registrar manejadores de excepciones
+app.add_exception_handler(StarletteHTTPException, http_exception_handler)
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
+app.add_exception_handler(Exception, global_exception_handler)
 
 # Registrar routers
 app.include_router(
@@ -65,6 +88,12 @@ app.include_router(
     ai.router,
     prefix=f"{settings.API_V1_PREFIX}/ai",
     tags=["Inteligencia Artificial"]
+)
+
+app.include_router(
+    dashboard.router,
+    prefix=f"{settings.API_V1_PREFIX}/dashboard",
+    tags=["Dashboard"]
 )
 
 # Endpoints

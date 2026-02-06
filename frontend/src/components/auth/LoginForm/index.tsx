@@ -54,7 +54,7 @@ const LoginForm = () => {
                 type="text"
                 {...register('username_or_email')}
                 className="appearance-none rounded relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                placeholder="tu username o email"
+                placeholder="Tu@email.com"
               />
               {errors.username_or_email && (
                 <p className="mt-1 text-sm text-red-600">{errors.username_or_email.message}</p>
@@ -69,7 +69,7 @@ const LoginForm = () => {
                 type="password"
                 {...register('password')}
                 className="appearance-none rounded relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                placeholder="tu contraseña"
+                placeholder="Ingresa tu contraseña..."
               />
               {errors.password && (
                 <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>

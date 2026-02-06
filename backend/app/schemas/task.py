@@ -1,5 +1,5 @@
-from pydantic import BaseModel, Field, field_validator, ConfigDict
-from typing import Optional, List
+from pydantic import BaseModel, Field, field_validator, ConfigDict, field_serializer
+from typing import Optional, List, Any
 from datetime import datetime
 from enum import Enum
 from app.schemas.contact import ContactResponse
@@ -181,7 +181,7 @@ class TaskUpdate(BaseModel):
 class TaskResponse(BaseModel):
     """
     Schema de RESPUESTA cuando devolvemos una tarea.
-    
+
     Incluye campos generados por la base de datos.
     """
     id: int
@@ -199,6 +199,18 @@ class TaskResponse(BaseModel):
     created_at: datetime
     updated_at: Optional[datetime] = None
     history_count: int = Field(default=0, description="Cantidad de registros en historial")
+
+    @classmethod
+    def from_orm_with_tags(cls, obj: Any) -> 'TaskResponse':
+        """
+        Crea una TaskResponse desde un objeto ORM, convirtiendo tags a lista.
+        """
+        data = cls.model_validate(obj)
+        if hasattr(obj, 'get_tags_list'):
+            data.tags_list = obj.get_tags_list()
+        elif data.tags:
+            data.tags_list = [tag.strip() for tag in data.tags.split(',') if tag.strip()]
+        return data
     
     model_config = ConfigDict(
         from_attributes=True,

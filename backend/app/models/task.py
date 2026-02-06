@@ -120,6 +120,7 @@ class Task(Base):
     created_by_ai = Column(Boolean, default=False, nullable=False)
     
     # Timestamps
+    completed_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     

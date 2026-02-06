@@ -56,7 +56,7 @@ const RegisterForm = () => {
                 type="email"
                 {...register('email')}
                 className="appearance-none rounded relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                placeholder="tu@email.com"
+                placeholder="Tu@email.com"
               />
               {errors.email && (
                 <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
@@ -72,7 +72,7 @@ const RegisterForm = () => {
                 type="text"
                 {...register('username')}
                 className="appearance-none rounded relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                placeholder="tu username"
+                placeholder="Username"
               />
               {errors.username && (
                 <p className="mt-1 text-sm text-red-600">{errors.username.message}</p>
@@ -88,7 +88,7 @@ const RegisterForm = () => {
                 type="password"
                 {...register('password')}
                 className="appearance-none rounded relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                placeholder="mínimo 8 caracteres"
+                placeholder="Mínimo 8 caracteres"
               />
               {errors.password && (
                 <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
@@ -104,7 +104,7 @@ const RegisterForm = () => {
                 type="text"
                 {...register('full_name')}
                 className="appearance-none rounded relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                placeholder="Tu nombre completo"
+                placeholder="Nombre completo"
               />
               {errors.full_name && (
                 <p className="mt-1 text-sm text-red-600">{errors.full_name.message}</p>

@@ -1,6 +1,7 @@
-from pydantic import BaseModel, EmailStr, Field, ConfigDict
+from pydantic import BaseModel, EmailStr, Field, ConfigDict, field_validator
 from typing import Optional
 from datetime import datetime
+import re
 
 """
 SCHEMAS DE USUARIO
@@ -55,17 +56,52 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     """
     Schema para CREAR un usuario (registro).
-    
+
     Incluye la contraseña en texto plano.
     La contraseña NUNCA se guarda así, se hashea antes de guardar en DB.
     """
     password: str = Field(
-        ..., 
+        ...,
         min_length=8,
-        description="Contraseña (mínimo 8 caracteres)",
+        max_length=128,
+        description="Contraseña (mínimo 8 caracteres, con mayúscula, minúscula, número y carácter especial)",
         examples=["SecurePass123!"]
     )
-    
+
+    @field_validator('password')
+    @classmethod
+    def validate_password_strength(cls, v: str) -> str:
+        """
+        Valida que la contraseña cumpla con los requisitos de fuerza.
+
+        Requisitos:
+        - Mínimo 8 caracteres
+        - Al menos una mayúscula
+        - Al menos una minúscula
+        - Al menos un número
+        - Al menos un carácter especial
+        """
+        if len(v) < 8:
+            raise ValueError('La contraseña debe tener al menos 8 caracteres')
+
+        if not re.search(r'[A-Z]', v):
+            raise ValueError('La contraseña debe contener al menos una mayúscula')
+
+        if not re.search(r'[a-z]', v):
+            raise ValueError('La contraseña debe contener al menos una minúscula')
+
+        if not re.search(r'[0-9]', v):
+            raise ValueError('La contraseña debe contener al menos un número')
+
+        if not re.search(r'[^A-Za-z0-9]', v):
+            raise ValueError('La contraseña debe contener al menos un carácter especial')
+
+        # Verificar que no tenga caracteres muy comunes o secuenciales
+        if v.lower() in ['password', '12345678', 'qwerty123', 'abc12345']:
+            raise ValueError('La contraseña es demasiado común. Por favor, usa una más segura')
+
+        return v
+
     # Ejemplo de uso en la API:
     # POST /api/v1/auth/register
     # Body: {"email": "user@example.com", "username": "johndoe", "password": "pass123456"}
@@ -84,9 +120,38 @@ class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
     username: Optional[str] = Field(None, min_length=3, max_length=50)
     full_name: Optional[str] = Field(None, max_length=200)
-    password: Optional[str] = Field(None, min_length=8)
+    password: Optional[str] = Field(None, min_length=8, max_length=128)
     is_active: Optional[bool] = None
-    
+
+    @field_validator('password')
+    @classmethod
+    def validate_password_strength(cls, v: Optional[str]) -> Optional[str]:
+        """
+        Valida que la contraseña cumpla con los requisitos de fuerza si se proporciona.
+        """
+        if v is None:
+            return v
+
+        if len(v) < 8:
+            raise ValueError('La contraseña debe tener al menos 8 caracteres')
+
+        if not re.search(r'[A-Z]', v):
+            raise ValueError('La contraseña debe contener al menos una mayúscula')
+
+        if not re.search(r'[a-z]', v):
+            raise ValueError('La contraseña debe contener al menos una minúscula')
+
+        if not re.search(r'[0-9]', v):
+            raise ValueError('La contraseña debe contener al menos un número')
+
+        if not re.search(r'[^A-Za-z0-9]', v):
+            raise ValueError('La contraseña debe contener al menos un carácter especial')
+
+        if v.lower() in ['password', '12345678', 'qwerty123', 'abc12345']:
+            raise ValueError('La contraseña es demasiado común. Por favor, usa una más segura')
+
+        return v
+
     # Ejemplo de uso:
     # PUT /api/v1/users/me
     # Body: {"full_name": "Juan Pérez"}  (solo actualiza el nombre)

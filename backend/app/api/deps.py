@@ -1,6 +1,5 @@
 from typing import Generator, Optional
-from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import Depends, HTTPException, status, Cookie
 from sqlalchemy.orm import Session
 from jose import JWTError
 
@@ -50,15 +49,10 @@ def get_db() -> Generator:
 # AUTHENTICATION DEPENDENCIES
 # ============================================
 
-# OAuth2PasswordBearer: Esquema de autenticación con Bearer Token
-# tokenUrl: La URL donde el frontend hace login para obtener el token
-bearer_scheme = HTTPBearer()
-
 def get_current_user(
     db: Session = Depends(get_db),
-    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)
+    access_token: Optional[str] = Cookie(None, alias="access_token")
 ) -> User:
-    token = credentials.credentials
     """
     Dependency que obtiene el usuario actual desde el token JWT.
     
@@ -68,8 +62,8 @@ def get_current_user(
             return current_user
     
     Flujo:
-        1. Extrae el token del header Authorization: Bearer <token>
-        2. Decodifica el token
+        1. Extrae el token de la cookie http-only (access_token)
+        2. Decodifica el token JWT
         3. Obtiene el user_id del token
         4. Busca el usuario en la base de datos
         5. Verifica que esté activo
@@ -78,30 +72,28 @@ def get_current_user(
     Si algo falla (token inválido, usuario no existe, usuario inactivo),
     lanza una excepción 401 Unauthorized.
     """
-    # Excepción que se lanzará si algo falla
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="No se pudieron validar las credenciales",
+        detail="No se encontro token de acceso",
         headers={"WWW-Authenticate": "Bearer"},
     )
     
-    try:
-        # Decodificar el token
-        payload = decode_access_token(token)
-        if payload is None:
-            raise credentials_exception
-        
-        # Extraer el user_id del token
-        # "sub" es el estándar JWT para el "subject" (usuario)
-        user_id: str = payload.get("sub")
-        if user_id is None:
-            raise credentials_exception
-        
-        # Crear objeto TokenData para validación
-        token_data = TokenData(user_id=int(user_id))
-        
-    except (JWTError, ValueError):
+    if not access_token:
         raise credentials_exception
+    
+    # Decodificar el token
+    payload = decode_access_token(access_token)
+    if payload is None:
+        raise credentials_exception
+    
+    # Extraer el user_id del token
+    # "sub" es el estándar para identificar al usuario en JWT
+    user_id = payload.get("sub")
+    if user_id is None:
+        raise credentials_exception
+    
+    # Crear objeto TokenData para validación
+    token_data = TokenData(user_id=int(user_id))
     
     # Buscar el usuario en la base de datos
     user = user_crud.get_user_by_id(db, user_id=token_data.user_id)

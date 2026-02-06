@@ -6,10 +6,10 @@ interface PublicRouteProps {
 }
 
 const PublicRoute = ({ children }: PublicRouteProps) => {
-  const { isAuthenticated } = useAuthStore()
+  const { user, isAuthenticated } = useAuthStore()
   const location = useLocation()
 
-  if (isAuthenticated) {
+  if (isAuthenticated && user) {
     return <Navigate to="/dashboard" state={{ from: location }} replace />
   }
 

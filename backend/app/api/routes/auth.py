@@ -1,12 +1,23 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Cookie, Request
 from starlette.responses import Response
 from sqlalchemy.orm import Session
 from datetime import timedelta
+from typing import Optional
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from app.api.deps import get_db, get_current_user
 from app.schemas.user import UserCreate, UserResponse, UserLogin, Token, LoginResponse
 from app.crud import user as user_crud
-from app.core.security import create_access_token, set_access_token_cookie, delete_access_token_cookie
+from app.core.security import (
+    create_access_token,
+    create_refresh_token,
+    verify_refresh_token,
+    set_access_token_cookie,
+    set_refresh_token_cookie,
+    delete_access_token_cookie,
+    delete_refresh_token_cookie
+)
 from app.core.config import settings
 from app.models.user import User
 
@@ -22,13 +33,18 @@ Este router maneja:
 # Crear router
 router = APIRouter()
 
+# Rate limiter específico para auth
+limiter = Limiter(key_func=get_remote_address)
+
 
 # ============================================
 # REGISTRO DE USUARIO
 # ============================================
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit("3/minute")
 def register_user(
+    request: Request,
     user_in: UserCreate,
     db: Session = Depends(get_db)
 ):
@@ -87,7 +103,9 @@ def register_user(
 # ============================================
 
 @router.post("/login", response_model=LoginResponse)
+@limiter.limit("5/minute")
 def login(
+    request: Request,
     response: Response,
     user_credentials: UserLogin,
     db: Session = Depends(get_db)
@@ -135,22 +153,23 @@ def login(
             headers={"WWW-Authenticate": "Bearer"},
         )
     
-    # Crear token JWT
-    # "sub" (subject) es el estándar para identificar al usuario
+    # Crear tokens JWT
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": str(user.id), "username": user.username},
         expires_delta=access_token_expires
     )
     
-    # Establecer cookie http-only
+    refresh_token = create_refresh_token(
+        data={"sub": str(user.id), "username": user.username}
+    )
+    
+    # Establecer cookies http-only
     set_access_token_cookie(response, access_token)
+    set_refresh_token_cookie(response, refresh_token)
     
     # Devolver token_type y datos del usuario
-    return {
-        "token_type": "bearer",
-        "user": user
-    }
+    return LoginResponse(token_type="bearer", user=user)
 
 
 # ============================================
@@ -188,7 +207,94 @@ def get_me(
 
 
 # ============================================
-# LOGOUT (Opcional - lado del frontend)
+# REFRESH TOKEN
+# ============================================
+
+@router.post("/refresh", response_model=LoginResponse)
+def refresh(
+    response: Response,
+    request: Request,
+    refresh_token: Optional[str] = Cookie(None),
+    db: Session = Depends(get_db)
+) -> LoginResponse:
+    """
+    Refresca el access token usando el refresh token.
+    
+    Pasos:
+        1. Verifica el refresh token de la cookie
+        2. Valida que el usuario exista y esté activo
+        3. Crea un nuevo access token
+        4. Devuelve el nuevo access token y datos del usuario
+    
+    Este endpoint no requiere autenticación (el refresh token está en la cookie).
+    
+    Response:
+        {
+            "token_type": "bearer",
+            "user": {
+                "id": 1,
+                "email": "user@example.com",
+                "username": "johndoe",
+                ...
+            }
+        }
+    """
+    if not refresh_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh token no encontrado"
+        )
+    
+    # Verificar el refresh token
+    payload = verify_refresh_token(refresh_token)
+    
+    if not payload:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh token inválido o expirado"
+        )
+    
+    # Obtener user_id del token
+    user_id_str = payload.get("sub")
+    if not user_id_str:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Formato de token inválido"
+        )
+    
+    user_id = int(user_id_str)
+    
+    # Verificar que el usuario exista y esté activo
+    user = user_crud.get_user_by_id(db, user_id=user_id)
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Usuario no encontrado"
+        )
+    
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Usuario inactivo"
+        )
+    
+    # Crear nuevo access token
+    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": str(user.id), "username": user.username},
+        expires_delta=access_token_expires
+    )
+    
+    # Establecer nueva cookie http-only
+    set_access_token_cookie(response, access_token)
+    
+    # Devolver token_type y datos del usuario
+    return LoginResponse(token_type="bearer", user=user)
+
+
+# ============================================
+# LOGOUT
 # ============================================
 
 @router.post("/logout")
@@ -196,7 +302,8 @@ def logout(response: Response) -> dict:
     """
     Logout del usuario.
     
-    Elimina la cookie http-only del token.
+    Elimina las cookies http-only de access y refresh token.
     """
     delete_access_token_cookie(response)
+    delete_refresh_token_cookie(response)
     return {"message": "Logout exitoso"}

@@ -540,53 +540,5 @@ def delete_task(
 # ESTADÍSTICAS DE TAREAS
 # ============================================
 
-@router.get("/stats/summary")
-def get_tasks_summary(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    """
-    Obtiene estadísticas de tareas del usuario.
-    
-    Devuelve:
-    - Total de tareas activas
-    - Tareas por estado (pendiente, en_progreso, etc.)
-    - Tareas enviadas hoy
-    - Tareas pendientes
-    """
-    # Total de tareas
-    total = task_crud.count_tasks_by_user(db, current_user.id)
-    
-    # Tareas por estado
-    all_tasks = task_crud.get_tasks_by_user(
-        db=db,
-        user_id=current_user.id,
-        limit=1000
-    )
-    
-    by_status = {
-        "pendiente": 0,
-        "en_progreso": 0,
-        "finalizado": 0,
-        "enviada": 0,
-        "cancelada": 0
-    }
-    
-    for task in all_tasks:
-        status_key = task.status.value
-        if status_key in by_status:
-            by_status[status_key] += 1
-    
-    # Tareas enviadas hoy
-    today = date.today()
-    sent_today = sum(1 for task in all_tasks if task.sent_at and task.sent_at.date() == today)
-    
-    # Tareas pendientes
-    pending = by_status["pendiente"]
-    
-    return {
-        "total_tasks": total,
-        "by_status": by_status,
-        "sent_today": sent_today,
-        "pending_tasks": pending
-    }
+# NOTA: El endpoint /stats/summary se eliminó para evitar duplicidad.
+# Use /api/v1/dashboard/stats para obtener estadísticas de tareas.

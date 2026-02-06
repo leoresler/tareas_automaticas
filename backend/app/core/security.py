@@ -69,6 +69,83 @@ def get_password_hash(password: str) -> str:
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     """
+    Crea un JWT token de acceso.
+    
+    Args:
+        data: Datos a incluir en el token (ej: {"sub": "1", "username": "john"})
+        expires_delta: Tiempo de expiración personalizado (opcional)
+    
+    Returns:
+        Token JWT como string
+    """
+    to_encode = data.copy()
+    
+    if expires_delta:
+        expire = datetime.now(timezone.utc) + expires_delta
+    else:
+        expire = datetime.now(timezone.utc) + timedelta(
+            minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
+        )
+    
+    to_encode.update({"exp": expire, "type": "access"})
+    
+    encoded_jwt = jwt.encode(
+        to_encode,
+        settings.SECRET_KEY,
+        algorithm=settings.ALGORITHM
+    )
+    
+    return encoded_jwt
+
+
+def create_refresh_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+    """
+    Crea un JWT token de refresh.
+    
+    Args:
+        data: Datos a incluir en el token (ej: {"sub": "1", "username": "john"})
+        expires_delta: Tiempo de expiración personalizado (opcional)
+    
+    Returns:
+        Token JWT de refresh como string
+    """
+    to_encode = data.copy()
+    
+    if expires_delta:
+        expire = datetime.now(timezone.utc) + expires_delta
+    else:
+        expire = datetime.now(timezone.utc) + timedelta(
+            days=settings.REFRESH_TOKEN_EXPIRE_DAYS
+        )
+    
+    to_encode.update({"exp": expire, "type": "refresh"})
+    
+    encoded_jwt = jwt.encode(
+        to_encode,
+        settings.SECRET_KEY,
+        algorithm=settings.ALGORITHM
+    )
+    
+    return encoded_jwt
+
+
+def verify_refresh_token(token: str) -> Optional[dict]:
+    """
+    Verifica y decodifica un refresh token.
+    
+    Args:
+        token: Token JWT de refresh a verificar
+    
+    Returns:
+        Datos del token si es válido y es de tipo refresh, None si no
+    """
+    payload = decode_access_token(token)
+    
+    if payload and payload.get("type") == "refresh":
+        return payload
+    
+    return None
+    """
     Crea un JWT token.
     
     Args:
@@ -121,17 +198,8 @@ def decode_access_token(token: str) -> Optional[dict]:
     
     Returns:
         Datos del token si es válido, None si es inválido o expirado
-    
-    Ejemplo:
-        payload = decode_access_token(token)
-        if payload:
-            user_id = payload.get("sub")
-            print(f"Usuario ID: {user_id}")
-        else:
-            print("Token inválido")
     """
     try:
-        # Intenta decodificar el token
         payload = jwt.decode(
             token,
             settings.SECRET_KEY,
@@ -139,7 +207,6 @@ def decode_access_token(token: str) -> Optional[dict]:
         )
         return payload
     except JWTError:
-        # Si falla (token inválido, expirado, manipulado), devuelve None
         return None
 
 
@@ -149,7 +216,7 @@ def decode_access_token(token: str) -> Optional[dict]:
 
 def set_access_token_cookie(response, token: str):
     """
-    Establece el token JWT como una cookie http-only.
+    Establece el token JWT de acceso como una cookie http-only.
     
     Args:
         response: Objeto Response de FastAPI
@@ -162,9 +229,31 @@ def set_access_token_cookie(response, token: str):
         key="access_token",
         value=token,
         httponly=True,
-        secure=False,
-        samesite="lax",
+        secure=not settings.DEBUG,
+        samesite="strict",
         max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+    )
+    return response
+
+
+def set_refresh_token_cookie(response, token: str):
+    """
+    Establece el token JWT de refresh como una cookie http-only.
+    
+    Args:
+        response: Objeto Response de FastAPI
+        token: Token JWT de refresh a guardar en la cookie
+    
+    Returns:
+        Response con la cookie configurada
+    """
+    response.set_cookie(
+        key="refresh_token",
+        value=token,
+        httponly=True,
+        secure=not settings.DEBUG,
+        samesite="strict",
+        max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
     )
     return response
 
@@ -179,5 +268,19 @@ def delete_access_token_cookie(response):
     Returns:
         Response con la cookie eliminada
     """
-    response.delete_cookie(key="access_token")
+    response.delete_cookie(key="access_token", path="/", domain=None)
+    return response
+
+
+def delete_refresh_token_cookie(response):
+    """
+    Elimina la cookie de refresh.
+    
+    Args:
+        response: Objeto Response de FastAPI
+    
+    Returns:
+        Response con la cookie eliminada
+    """
+    response.delete_cookie(key="refresh_token", path="/", domain=None)
     return response
