@@ -42,7 +42,9 @@ const TaskForm = ({ initialData, onSuccess, onCancel }: TaskFormProps) => {
 
       const formattedData = {
         ...data,
-        tags: typeof data.tags === 'string' ? data.tags.split(',').map(t => t.trim()).filter(t => t) : data.tags,
+        tags: typeof data.tags === 'string' 
+          ? (data.tags as string).split(',').map((t: string) => t.trim()).filter((t: string) => t) 
+          : data.tags,
       }
 
       if (isEditing && currentTask) {
@@ -157,16 +159,6 @@ const TaskForm = ({ initialData, onSuccess, onCancel }: TaskFormProps) => {
             {(watch('contact_ids')?.length ?? 0) === 0 && (
               <p className="mt-1 text-sm text-red-600">Debe seleccionar al menos un contacto</p>
             )}
-          </div>
-
-          <div>
-            <label htmlFor="contact_ids" className="block text-sm font-medium text-gray-700 mb-2">
-              Contactos Asociados
-            </label>
-            <ContactSelector
-              selectedContacts={watch('contact_ids') || []}
-              onChange={(ids) => setValue('contact_ids', ids)}
-            />
           </div>
 
           <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">

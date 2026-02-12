@@ -30,13 +30,13 @@ const ContactForm = ({ initialData, onSuccess, onCancel }: ContactFormProps) => 
     formState: { errors },
     reset,
   } = useForm<ContactFormData>({
+    resolver: zodResolver(contactFormSchema),
     defaultValues: {
       name: initialData?.name || '',
       channel_type: initialData?.channel_type || 'whatsapp',
       channel_value: initialData?.channel_value || '',
       is_active: initialData?.is_active ?? true,
     },
-    resolver: zodResolver(contactFormSchema),
   })
 
   const onSubmit = async (data: ContactFormData) => {
