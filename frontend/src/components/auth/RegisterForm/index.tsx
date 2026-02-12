@@ -8,7 +8,12 @@ import { useAuthStore } from '../../../features/auth/authStore'
 const registerSchema = z.object({
   email: z.string().email('Email inválido'),
   username: z.string().min(3, 'Username debe tener al menos 3 caracteres').max(50, 'Username debe tener máximo 50 caracteres'),
-  password: z.string().min(8, 'Contraseña debe tener al menos 8 caracteres'),
+  password: z.string()
+    .min(8, 'Mínimo 8 caracteres')
+    .regex(/[A-Z]/, 'Al menos una mayúscula')
+    .regex(/[a-z]/, 'Al menos una minúscula')
+    .regex(/[0-9]/, 'Al menos un número')
+    .regex(/[^A-Za-z0-9]/, 'Al menos un carácter especial (!@#$%...)'),
   full_name: z.string().optional(),
 })
 
@@ -93,6 +98,17 @@ const RegisterForm = () => {
               {errors.password && (
                 <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
               )}
+              
+              <div className="mt-2 text-xs text-gray-500">
+                <p className="font-medium">La contraseña debe contener:</p>
+                <ul className="mt-1 ml-4 list-disc space-y-1">
+                  <li>Mínimo 8 caracteres</li>
+                  <li>Al menos una mayúscula</li>
+                  <li>Al menos una minúscula</li>
+                  <li>Al menos un número</li>
+                  <li>Al menos un carácter especial (!@#$%^&*)</li>
+                </ul>
+              </div>
             </div>
 
             <div>

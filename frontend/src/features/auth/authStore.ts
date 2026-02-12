@@ -42,9 +42,20 @@ export const useAuthStore = create<AuthState & AuthActions>()(
           const response = await authApi.login({ username_or_email, password });
           set({ user: response.user, isAuthenticated: true, loading: false });
         } catch (err: unknown) {
-          const errorMessage =
-            (err as { response?: { data?: { detail?: string } } })?.response
-              ?.data?.detail || "Error al iniciar sesión";
+          let errorMessage = "Error al iniciar sesión";
+          
+          if (err && typeof err === 'object' && 'response' in err) {
+            const response = err.response as any;
+            
+            if (response?.status === 422 && response?.data?.details?.errors) {
+              // Errores de validación específicos
+              const validationErrors = response.data.details.errors;
+              errorMessage = validationErrors.map((e: any) => e.message).join(', ');
+            } else if (response?.data?.detail) {
+              errorMessage = response.data.detail;
+            }
+          }
+          
           set({ error: errorMessage, loading: false });
           throw err;
         }
@@ -61,9 +72,20 @@ export const useAuthStore = create<AuthState & AuthActions>()(
           });
           set({ user, isAuthenticated: true, loading: false });
         } catch (err: unknown) {
-          const errorMessage =
-            (err as { response?: { data?: { detail?: string } } })?.response
-              ?.data?.detail || "Error al registrar usuario";
+          let errorMessage = "Error al registrar usuario";
+          
+          if (err && typeof err === 'object' && 'response' in err) {
+            const response = err.response as any;
+            
+            if (response?.status === 422 && response?.data?.details?.errors) {
+              // Errores de validación específicos
+              const validationErrors = response.data.details.errors;
+              errorMessage = validationErrors.map((e: any) => e.message).join(', ');
+            } else if (response?.data?.detail) {
+              errorMessage = response.data.detail;
+            }
+          }
+          
           set({ error: errorMessage, loading: false });
           throw err;
         }

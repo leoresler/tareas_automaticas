@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -42,7 +42,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=settings.BACKEND_CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -108,8 +108,23 @@ def root():
 
 @app.get("/health")
 def health_check():
-    """Health check"""
-    return {"status": "ok"}
+    """Health check para Render"""
+    try:
+        # Test de conexión a DB
+        with engine.connect() as connection:
+            connection.execute(text("SELECT 1"))
+        
+        from datetime import datetime
+        return {
+            "status": "healthy",
+            "database": "connected",
+            "timestamp": datetime.utcnow().isoformat()
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Service unavailable: {str(e)}"
+        )
 
 @app.get("/test-db")
 def test_database():
@@ -119,12 +134,12 @@ def test_database():
             result = connection.execute(text("SELECT 1 as number"))
             row = result.fetchone()
             
-            result_db = connection.execute(text("SELECT DATABASE() as db_name"))
+            result_db = connection.execute(text("SELECT current_database() as db_name"))
             db_row = result_db.fetchone()
             
             return {
                 "status": "success",
-                "message": "✅ Conectado a MySQL",
+                "message": "✅ Conectado a PostgreSQL/Supabase",
                 "database": db_row[0] if db_row else None
             }
     except Exception as e:

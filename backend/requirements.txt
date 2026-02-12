@@ -22,7 +22,7 @@ pycparser==3.0
 pydantic==2.12.5
 pydantic-settings==2.12.0
 pydantic_core==2.41.5
-PyMySQL==1.1.2
+psycopg2-binary==2.9.9
 python-dotenv==1.2.1
 python-jose==3.5.0
 python-multipart==0.0.21
@@ -34,3 +34,4 @@ typing-inspection==0.4.2
 typing_extensions==4.15.0
 uvicorn==0.40.0
 slowapi==0.1.9
+python-json-logger==2.0.7

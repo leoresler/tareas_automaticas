@@ -1,9 +1,8 @@
 from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, declarative_base
 from app.core.config import settings
 
-# Crear el engine de conexión a MySQL
+# Crear el engine de conexión a PostgreSQL
 engine = create_engine(
     settings.DATABASE_URL,
     echo=settings.DEBUG,  # Muestra SQL en consola si DEBUG=True
@@ -22,6 +21,13 @@ SessionLocal = sessionmaker(
 Base = declarative_base()
 
 # Dependency para obtener sesión de DB
+async def get_async_db():
+    async with AsyncSessionLocal() as session: # type: ignore
+        try:
+            yield session
+        finally:
+            await session.close()
+
 def get_db():
     """
     Genera una sesión de base de datos.
