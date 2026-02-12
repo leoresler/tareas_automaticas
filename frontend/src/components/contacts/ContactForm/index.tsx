@@ -29,7 +29,7 @@ const ContactForm = ({ initialData, onSuccess, onCancel }: ContactFormProps) => 
     handleSubmit,
     formState: { errors },
     reset,
-  } = useForm<ContactFormData>({
+  } = useForm<any>({
     resolver: zodResolver(contactFormSchema),
     defaultValues: {
       name: initialData?.name || '',
@@ -101,7 +101,7 @@ const ContactForm = ({ initialData, onSuccess, onCancel }: ContactFormProps) => 
               `}
               placeholder="Ej: Juan Pérez"
             />
-            {errors.name && (
+            {errors.name && typeof errors.name.message === 'string' && (
               <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
             )}
           </div>
@@ -121,7 +121,7 @@ const ContactForm = ({ initialData, onSuccess, onCancel }: ContactFormProps) => 
               </option>
             ))}
           </select>
-            {errors.channel_type && (
+            {errors.channel_type && typeof errors.channel_type.message === 'string' && (
               <p className="mt-1 text-sm text-red-600">{errors.channel_type.message}</p>
             )}
           </div>
@@ -137,7 +137,7 @@ const ContactForm = ({ initialData, onSuccess, onCancel }: ContactFormProps) => 
               className={`w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${errors.channel_value ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : ''}`}
               placeholder={getChannelPlaceholder(initialData?.channel_type || 'whatsapp')}
             />
-            {errors.channel_value && (
+            {errors.channel_value && typeof errors.channel_value.message === 'string' && (
               <p className="mt-1 text-sm text-red-600">{errors.channel_value.message}</p>
             )}
           </div>
@@ -152,7 +152,7 @@ const ContactForm = ({ initialData, onSuccess, onCancel }: ContactFormProps) => 
               />
               <span className="text-sm font-medium text-gray-700">Activo</span>
             </label>
-              {errors.is_active && (
+              {errors.is_active && typeof errors.is_active.message === 'string' && (
                 <p className="mt-1 text-sm text-red-600">{errors.is_active.message}</p>
               )}
           </div>

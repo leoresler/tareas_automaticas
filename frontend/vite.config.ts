@@ -8,9 +8,19 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  base: process.env.NODE_ENV === 'production' ? '/' : '/', // Ajustar para producción
   build: {
     outDir: 'dist',
     sourcemap: false, // Deshabilitar en producción para mejor rendimiento
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          router: ['react-router-dom'],
+          ui: ['lucide-react', 'react-hot-toast']
+        }
+      }
+    }
   },
   server: {
     port: 5173,

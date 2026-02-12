@@ -2,7 +2,11 @@ import axios from 'axios'
 import type { User, LoginRequest, RegisterRequest, LoginResponse } from './types'
 
 // URL dinámica que cambia según el ambiente (dev/prod)
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1'
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
+
+if (!API_BASE_URL) {
+  throw new Error('VITE_API_BASE_URL environment variable is required')
+}
 
 // Log para debugging (solo en desarrollo)
 if (import.meta.env.DEV) {
